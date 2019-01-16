@@ -109,3 +109,40 @@ def place_order(asset: int, amount: float, action: str, type: int, broker: str,
     data['extra'] = json.loads(data['extra'])
 
     return data
+
+
+def get_assets() -> dict:
+    """
+    Sends GET request to REST API to get info about all Assets.
+    :return: 
+    """
+    resp = requests.get(
+        '{}{}'.format(EETC_ORDER_MANAGER_BASE_URL_HTTP, '/api/asset/list'),
+        headers={EETC_ORDER_MANAGER_API_KEY_HEADER: EETC_ORDER_MANAGER_API_KEY},
+    )
+    data = process_reponse(resp)
+
+    # convert "extra" from str to dict for convenience
+    for asset in data:
+        asset['extra'] = json.loads(asset['extra'])
+
+    return data
+
+
+def get_asset(asset_id: int) -> dict:
+    """
+    Sends GET request to REST API to get info about a specific Asset.
+    :param asset_id:
+    :return:
+    """
+    resp = requests.get(
+        '{}{}'.format(EETC_ORDER_MANAGER_BASE_URL_HTTP, '/api/asset/get'),
+        params={'id': asset_id},
+        headers={EETC_ORDER_MANAGER_API_KEY_HEADER: EETC_ORDER_MANAGER_API_KEY},
+    )
+    data = process_reponse(resp)
+
+    # convert "extra" from str to dict for convenience
+    data['extra'] = json.loads(data['extra'])
+
+    return data
