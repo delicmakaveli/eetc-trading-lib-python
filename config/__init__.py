@@ -3,8 +3,8 @@ EETC_ORDER_MANAGER_API_KEY_HEADER = 'EETC-API-KEY'
 EETC_ORDER_MANAGER_BASE_URL_HTTP = 'http://localhost:8080'
 EETC_ORDER_MANAGER_BASE_URL_HTTPS = 'https://localhost:8443'
 
-EETC_ORDER_MANAGER_BASE_URL_WS = 'ws://localhost:8080'
-EETC_ORDER_MANAGER_BASE_URL_WSS = 'wss://localhost:8443'
+EETC_ORDER_MANAGER_BASE_URL_WS = 'ws://localhost:8080/eetc-websocket'
+EETC_ORDER_MANAGER_BASE_URL_WSS = 'wss://localhost:8443/eetc-websocket'
 
 # Place your credentials for EETC Order Manager here:
 EETC_ORDER_MANAGER_API_KEY = '40I2OLWIb3YVI72ENYOadQM8ISDlb3Pp'

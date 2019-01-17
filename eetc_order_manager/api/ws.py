@@ -23,13 +23,16 @@ def on_close(ws):
 
 def on_open(ws):
     print('Websocket client open.')
+    # TODO: We have a proper STOMP message, but we can't subscribe.Only works in
+    # JavaScript and there's no good way to use STOMP over WebSocket in Python.
+    sub = "SUBSCRIBE\nid:3\ndestination:{}\n\n\x00".format(
+        "/user/{}/queue/order".format(EETC_ORDER_MANAGER_CLIENT_ID),
+    )
+    ws.send(sub)
 
 
 def get_order_ws_subscription_url() -> str:
-    return '{}{}'.format(
-        EETC_ORDER_MANAGER_BASE_URL_WS,
-        '/user/{}/queue/order'.format(EETC_ORDER_MANAGER_CLIENT_ID),
-    )
+    return EETC_ORDER_MANAGER_BASE_URL_WS
 
 
 def get_websocket_client() -> WebSocketApp:
