@@ -359,7 +359,14 @@ class EETCOrderManagerRESTClient:
         return data
 
 
+# TODO add type hints for all these functions
+
 def timestamp_to_datetime_str(timestamp):
+    """
+    TODO
+    :param timestamp:
+    :return:
+    """
     return datetime.fromtimestamp(
         int(timestamp[:10]),
     ).strftime('%Y-%m-%d %H:%M:%S')
@@ -377,9 +384,11 @@ def is_date_bigger_than(date_str, than_str):
     return date > than
 
 
+# TODO move these inside EETCTradingBot class, it's cleaner
+
 def process_order_book_data(bot_instance=None, topic=None, latest_data=None):
     """
-    Function for processing and maintaining "historical" order book data.
+    TODO
     """
     if not latest_data or not topic or not bot_instance:
         return
@@ -404,7 +413,7 @@ def process_order_book_data(bot_instance=None, topic=None, latest_data=None):
 
 def process_trade_data(bot_instance=None, topic=None, latest_data=None):
     """
-    Function for processing and maintaining "historical" trade data.
+    TODO
     """
     if not latest_data or not topic or not bot_instance:
         return
@@ -419,7 +428,7 @@ def process_trade_data(bot_instance=None, topic=None, latest_data=None):
 
 def process_candle_data(bot_instance=None, topic=None, latest_data=None):
     """
-    Function for processing and maintaining "historical" candle data.
+    TODO
     """
     if not latest_data or not topic or not bot_instance:
         return
