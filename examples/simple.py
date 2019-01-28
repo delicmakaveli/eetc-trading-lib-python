@@ -18,7 +18,7 @@ def algorithm(bot_instance: EETCTradingBot,
 
 bot = EETCTradingBot(
     algorithm=algorithm, eetc_api_key="rUyJjh6s9UKEFohZ6RVNclsqI6KtzLvP",
-    data_feed_topics=[""], trigger_on_topics=["trades:BTC/USD"],
+    data_feed_topics=["candles:BTC/USD:1m"], trigger_on_topics=["candles:BTC/USD:1m"],
     allow_remote_triggering=False,
 )
 

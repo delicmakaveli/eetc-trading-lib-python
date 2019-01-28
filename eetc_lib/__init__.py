@@ -1,5 +1,7 @@
 import json
 import threading
+from collections import deque
+from datetime import datetime
 from time import sleep
 from typing import Callable
 from uuid import uuid4
@@ -80,8 +82,6 @@ class EETCTradingBot:
     def authenticate(self):
         r = self.order_manager_client.authenticate()
 
-        print(r)
-
         self.eetc_data_feed_zmq_sub_url = r.get("eetc_data_feed_zmq_sub_url")
         self.eetc_data_feed_zmq_req_url = r.get("eetc_data_feed_zmq_req_url")
         self.eetc_order_manager_zmq_sub_url = r.get("eetc_order_manager_zmq_sub_url")
@@ -139,6 +139,7 @@ class EETCDataFeedThread(threading.Thread):
     """
     zmq_context = None
     zmq_sub_socket = None
+    zmq_req_socket = None
 
     bot_instance = None
 
@@ -150,8 +151,10 @@ class EETCDataFeedThread(threading.Thread):
         self.zmq_context = zmq.Context()
         self.zmq_sub_socket = self.zmq_context.socket(zmq.SUB)
         self.zmq_sub_socket.connect(self.bot_instance.eetc_data_feed_zmq_sub_url)
+        self.zmq_req_socket = self.zmq_context.socket(zmq.REQ)
+        self.zmq_req_socket.connect(self.bot_instance.eetc_data_feed_zmq_req_url)
 
-        # TODO get initial data for all desired topics via ZeroMQ REQ-REP
+        self.get_data_snapshot()
 
         for topic in self.bot_instance.data_feed_topics:
             self.zmq_sub_socket.setsockopt_string(zmq.SUBSCRIBE, topic)
@@ -161,8 +164,12 @@ class EETCDataFeedThread(threading.Thread):
             topic = multipart_msg[0].decode()
             data = json.loads(multipart_msg[1].decode())
 
-            # TODO implement data maintenance logic for bot_instance.data
-            self.bot_instance.data[topic] = data
+            if topic.startswith('candles'):
+                process_candle_data(self.bot_instance, topic, data)
+            elif topic.startswith('book'):
+                process_order_book_data(self.bot_instance, topic, data)
+            elif topic.startswith('trades'):
+                process_trade_data(self.bot_instance, topic, data)
 
             # extract these to variables just for readability
             algorithm_lock = self.bot_instance.algorithm_lock
@@ -175,6 +182,24 @@ class EETCDataFeedThread(threading.Thread):
                     daemon=True,
                 )
                 algorithm_thread.start()
+
+    def get_data_snapshot(self):
+        """
+        TODO
+        :return:
+        """
+        for topic in self.bot_instance.data_feed_topics:
+            self.zmq_req_socket.send(topic.encode())
+            response = self.zmq_req_socket.recv_multipart()
+
+            data = json.loads(response[1].decode())
+
+            if topic.startswith('candles'):
+                process_candle_data(self.bot_instance, topic, data)
+            elif topic.startswith('book'):
+                process_order_book_data(self.bot_instance, topic, data)
+            elif topic.startswith('trades'):
+                process_trade_data(self.bot_instance, topic, data)
 
 
 class EETCOrderManagerRESTClient:
@@ -332,3 +357,87 @@ class EETCOrderManagerRESTClient:
         data = self.process_reponse(resp)
 
         return data
+
+
+def timestamp_to_datetime_str(timestamp):
+    return datetime.fromtimestamp(
+        int(timestamp[:10]),
+    ).strftime('%Y-%m-%d %H:%M:%S')
+
+
+def is_date_bigger_than(date_str, than_str):
+    """
+    Check if date is "bigger" (later) than the other
+    :param date_str: datetime string of date we wish to compare
+    :param than_str: datetime string of date we wish to compare to
+    :return: True/False
+    """
+    date = datetime.strptime(date_str, '%Y-%m-%d %H:%M:%S')
+    than = datetime.strptime(than_str, '%Y-%m-%d %H:%M:%S')
+    return date > than
+
+
+def process_order_book_data(bot_instance=None, topic=None, latest_data=None):
+    """
+    Function for processing and maintaining "historical" order book data.
+    """
+    if not latest_data or not topic or not bot_instance:
+        return
+
+    if len(latest_data) > 1:
+        # storing in dict for performance
+        order_book = {}
+        for price_lvl_data in latest_data:
+            order_book[price_lvl_data['price']] = price_lvl_data
+
+        bot_instance.data[topic] = order_book
+    else:
+        if topic in bot_instance.data:
+            # https://docs.bitfinex.com/v2/reference#ws-public-order-books
+            if latest_data[0]['count'] == 0:
+                bot_instance.data[topic].pop(latest_data[0]['price'], None)
+            else:
+                bot_instance.data[topic].update(
+                    {latest_data[0]['price']: latest_data[0]},
+                )
+
+
+def process_trade_data(bot_instance=None, topic=None, latest_data=None):
+    """
+    Function for processing and maintaining "historical" trade data.
+    """
+    if not latest_data or not topic or not bot_instance:
+        return
+
+    if len(latest_data) > 1:
+        # storing in deque for performance
+        bot_instance.data[topic] = deque(latest_data, maxlen=len(latest_data))
+    else:
+        if topic in bot_instance.data:
+            bot_instance.data[topic].append(latest_data[0])
+
+
+def process_candle_data(bot_instance=None, topic=None, latest_data=None):
+    """
+    Function for processing and maintaining "historical" candle data.
+    """
+    if not latest_data or not topic or not bot_instance:
+        return
+
+    if len(latest_data) > 1:
+        bot_instance.data[topic] = latest_data
+    else:
+        if topic in bot_instance.data:
+            latest_data = latest_data[-1]
+            latest_time = timestamp_to_datetime_str(str(latest_data['time']))
+            last_time = timestamp_to_datetime_str(str(
+                bot_instance.data[topic][-1]['time'],
+            ))
+
+            if is_date_bigger_than(latest_time, last_time):
+                # add new candle
+                bot_instance.data[topic].append(latest_data)
+                bot_instance.data.pop(0, None)
+            elif last_time == latest_time:
+                # update the latest one
+                bot_instance.data[topic][-1].update(latest_data)
