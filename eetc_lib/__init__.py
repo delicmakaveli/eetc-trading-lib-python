@@ -39,7 +39,6 @@ class EETCTradingBot:
         self.eetc_api_key = eetc_api_key
         self.data_feed_topics = data_feed_topics
         self.trigger_on_topics = trigger_on_topics
-        # TODO implement manual remote triggering logic
         self.allow_remote_triggering = allow_remote_triggering
 
         self.order_manager_client = EETCOrderManagerRESTClient(eetc_api_key)
