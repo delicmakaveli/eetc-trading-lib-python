@@ -60,9 +60,11 @@ class EETCTradingBot:
 
         self.order_manager_thread = EETCOrderManagerThread(daemon=True)
         self.data_feed_thread = EETCDataFeedThread(daemon=True)
+        self.remote_trigger_thread = RemoteTriggerThread(daemon=True)
 
         self.data_feed_thread.bot_instance = self
         self.order_manager_thread.bot_instance = self
+        self.remote_trigger_thread.bot_instance = self
 
     def start(self):
         """
@@ -75,6 +77,7 @@ class EETCTradingBot:
         self.order_manager_thread.start()
         sleep(1)  # idk why the fuck do I have this...
         self.data_feed_thread.start()
+        self.remote_trigger_thread.start()
 
         while True:
             sleep(3600)  # just some bullshit so we don't kill the CPU :)
@@ -172,10 +175,9 @@ class EETCDataFeedThread(threading.Thread):
                 process_trade_data(self.bot_instance, topic, data)
 
             # extract these to variables just for readability
-            algorithm_lock = self.bot_instance.algorithm_lock
-            trigger_on_topics = self.bot_instance.trigger_on_topics
+            trigger_topics = self.bot_instance.trigger_on_topics
 
-            if not algorithm_lock and topic in trigger_on_topics:
+            if not self.bot_instance.algorithm_lock and topic in trigger_topics:
                 algorithm_thread = threading.Thread(
                     target=self.bot_instance.algorithm,
                     args=(self.bot_instance, topic),
@@ -200,6 +202,59 @@ class EETCDataFeedThread(threading.Thread):
                 process_order_book_data(self.bot_instance, topic, data)
             elif topic.startswith('trades'):
                 process_trade_data(self.bot_instance, topic, data)
+
+
+def algorithm_manual_trigger_routine(bot_instance, manual_trigger_details):
+    """
+    TODO
+    :param bot_instance:
+    :param manual_trigger_details:
+    :return:
+    """
+    while True:
+        # keep trying until the algorithm lock becomes free, then trigger
+        if not bot_instance.algorithm_lock:
+            bot_instance.algorithm(
+                bot_instance, manual_trigger_details=manual_trigger_details,
+            )
+            break
+
+
+class RemoteTriggerThread(threading.Thread):
+    """
+    TODO
+    """
+    zmq_context: zmq.Context = None
+    zmq_rep_socket: zmq.Socket = None
+
+    bot_instance = None
+
+    def run(self):
+        """
+        TODO
+        :return:
+        """
+        self.zmq_context = zmq.Context()
+        self.zmq_rep_socket = self.zmq_context.socket(zmq.REP)
+        self.zmq_rep_socket.bind("tcp://*:21913")
+
+        while True:
+            try:
+                request = json.loads(self.zmq_rep_socket.recv().decode())
+
+                # Trigger algorithm in a separate worker thread
+                worker_thread = threading.Thread(
+                    target=algorithm_manual_trigger_routine,
+                    args=(self.bot_instance, request, ),
+                    daemon=True,
+                )
+                worker_thread.start()
+
+                reply = {"Message": "Algorithm triggered successfully."}
+            except Exception as e:
+                reply = {"Message": "Something went wrong.", "Error": str(e)}
+
+            self.zmq_rep_socket.send(json.dumps(reply).encode())
 
 
 class EETCOrderManagerRESTClient:
@@ -372,7 +427,7 @@ def timestamp_to_datetime_str(timestamp):
     ).strftime('%Y-%m-%d %H:%M:%S')
 
 
-def is_date_bigger_than(date_str, than_str):
+def is_date_bigger_than(date_str: str, than_str: str) -> bool:
     """
     Check if date is "bigger" (later) than the other
     :param date_str: datetime string of date we wish to compare
