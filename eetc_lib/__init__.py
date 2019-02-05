@@ -76,7 +76,8 @@ class EETCTradingBot:
         self.order_manager_thread.start()
         sleep(1)  # idk why the fuck do I have this...
         self.data_feed_thread.start()
-        self.remote_trigger_thread.start()
+        if self.allow_remote_triggering:
+            self.remote_trigger_thread.start()
 
         while True:
             sleep(3600)  # just some bullshit so we don't kill the CPU :)
