@@ -1,4 +1,4 @@
-from eetc_lib import EETCTradingBot
+from eetc_algo_trading import EETCTradingBot
 
 
 def algorithm(bot_instance, topic=None, manual_trigger_details=None):
@@ -18,7 +18,8 @@ def algorithm(bot_instance, topic=None, manual_trigger_details=None):
 
 
 bot = EETCTradingBot(
-    algorithm=algorithm, eetc_api_key="rUyJjh6s9UKEFohZ6RVNclsqI6KtzLvP",
+    algorithm=algorithm,
+    eetc_api_key="rAnDoMaPiKeyProvidedbyEETC",
     data_feed_topics=["candles:BTC/USD:1m"],
     trigger_on_topics=["candles:BTC/USD:1m"],
     allow_remote_triggering=False,
