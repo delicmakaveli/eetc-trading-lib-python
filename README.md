@@ -89,6 +89,10 @@ Installation
 - PyPi repository: https://pypi.org/project/eetc-algo-trading-lib/
 - Run command: `pip install eetc-algo-trading-lib`
 
+Development
+-----------
+- Packaging: https://packaging.python.org/tutorials/packaging-projects/
+
 Licence
 -------
 This project is licensed under [GNU Public License](https://github.com/delicmakaveli/eetc-trading-lib-python/blob/master/LICENSE).
