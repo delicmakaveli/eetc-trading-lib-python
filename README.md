@@ -59,6 +59,18 @@ To become a client and obtain your API key, please contact us at: [eastempiretra
 It is entirely up to the developer to implement their own order management logic.
 [EETC Order Manager](https://github.com/delicmakaveli/eetc-order-manager-crypto) provides various APIs where clients can get order information and receive real-time updates.
 
+You will receive real-time updated on all your placed orders, that part is already implemented for you.
+
+They can be accessed like this:
+```python
+# You can obtain lock for reading placed orders, but it's not necessary
+bot_instance.placed_orders_lock = True  # kinda "obtain" lock
+
+print(bot_instance.placed_orders)
+
+bot_instance.placed_orders_lock = False  # kinda "release" lock
+```
+
 The most common tactic is to write a helper function for managing orders which will be executed within the algorithm function.
 
 This approach may not be the most user-friendly, but it was chosen because it gives the developer absolute freedom for writing their strategy, which includes order management.
