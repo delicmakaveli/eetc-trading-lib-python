@@ -11,7 +11,7 @@ import zmq
 
 
 EETC_ORDER_MANAGER_API_KEY_HEADER = 'EETC-API-KEY'
-
+# TODO launch EETC Order Manager live
 EETC_ORDER_MANAGER_BASE_URL_HTTP = 'http://localhost:8080'
 EETC_ORDER_MANAGER_BASE_URL_HTTPS = 'https://localhost:8443'
 
