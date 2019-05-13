@@ -20,12 +20,15 @@ class EETCTradingBot:
     """
     TODO
     """
-    def __init__(self, algorithm: Callable, eetc_api_key: str,
-                 data_feed_topics: list, trigger_on_topics: list,
+    def __init__(self,
+                 algorithm: Callable,
+                 eetc_api_key: str,
+                 data_feed_topics: list,
+                 trigger_on_topics: list,
                  allow_remote_triggering: bool = False,
                  ):
         """
-        TODO
+        Init method for EETCTradingBot. Initializes all dependencies.
         :param algorithm:
         :param eetc_api_key:
         :param data_feed_topics:
@@ -89,6 +92,71 @@ class EETCTradingBot:
         assert self.eetc_data_feed_zmq_sub_url, "Authentication failed"
         assert self.eetc_data_feed_zmq_req_url, "Authentication faield"
         assert self.eetc_order_manager_zmq_sub_url, "Authentication failed"
+
+    def process_order_book_data(self, topic=None, latest_data=None):
+        """
+        Function for processing and maintaining order book data.
+        """
+        if not latest_data or not topic:
+            return
+
+        if len(latest_data) > 1:
+            # storing in dict for performance
+            order_book = {}
+            for price_lvl_data in latest_data:
+                order_book[price_lvl_data['price']] = price_lvl_data
+
+            self.data[topic] = order_book
+        else:
+            if topic in self.data:
+                # https://docs.bitfinex.com/v2/reference#ws-public-order-books
+                if latest_data[0]['count'] == 0:
+                    self.data[topic].pop(latest_data[0]['price'], None)
+                else:
+                    self.data[topic].update(
+                        {latest_data[0]['price']: latest_data[0]},
+                    )
+
+    def process_trade_data(self, topic=None, latest_data=None):
+        """
+        Function for processing and maintaining trade data.
+        """
+        if not latest_data or not topic:
+            return
+
+        if len(latest_data) > 1:
+            # storing in deque for performance
+            self.data[topic] = deque(latest_data, maxlen=len(latest_data))
+        else:
+            if topic in self.data:
+                self.data[topic].append(latest_data[0])
+
+    def process_candle_data(self, topic=None, latest_data=None):
+        """
+        Function for processing and maintaining candle data.
+        """
+        if not latest_data or not topic:
+            return
+
+        if len(latest_data) > 1:
+            self.data[topic] = latest_data
+        else:
+            if topic in self.data:
+                latest_data = latest_data[-1]
+                latest_time = timestamp_to_datetime_str(str(
+                    latest_data['time'],
+                ))
+                last_time = timestamp_to_datetime_str(str(
+                    self.data[topic][-1]['time'],
+                ))
+
+                if is_date_bigger_than(latest_time, last_time):
+                    # add new candle
+                    self.data[topic].append(latest_data)
+                    self.data.pop(0, None)
+                elif last_time == latest_time:
+                    # update the latest one
+                    self.data[topic][-1].update(latest_data)
 
 
 class EETCOrderManagerThread(threading.Thread):
@@ -165,11 +233,11 @@ class EETCDataFeedThread(threading.Thread):
             data = json.loads(multipart_msg[1].decode())
 
             if topic.startswith('candles'):
-                process_candle_data(self.bot_instance, topic, data)
+                self.bot_instance.process_candle_data(topic, data)
             elif topic.startswith('book'):
-                process_order_book_data(self.bot_instance, topic, data)
+                self.bot_instance.process_order_book_data(topic, data)
             elif topic.startswith('trades'):
-                process_trade_data(self.bot_instance, topic, data)
+                self.bot_instance.process_trade_data(topic, data)
 
             # extract these to variables just for readability
             trigger_topics = self.bot_instance.trigger_on_topics
@@ -194,11 +262,11 @@ class EETCDataFeedThread(threading.Thread):
             data = json.loads(response[1].decode())
 
             if topic.startswith('candles'):
-                process_candle_data(self.bot_instance, topic, data)
+                self.bot_instance.process_candle_data(topic, data)
             elif topic.startswith('book'):
-                process_order_book_data(self.bot_instance, topic, data)
+                self.bot_instance.process_order_book_data(topic, data)
             elif topic.startswith('trades'):
-                process_trade_data(self.bot_instance, topic, data)
+                self.bot_instance.process_trade_data(topic, data)
 
 
 def algorithm_manual_trigger_routine(bot_instance, manual_trigger_details):
@@ -434,71 +502,3 @@ def is_date_bigger_than(date_str: str, than_str: str) -> bool:
     date = datetime.strptime(date_str, '%Y-%m-%d %H:%M:%S')
     than = datetime.strptime(than_str, '%Y-%m-%d %H:%M:%S')
     return date > than
-
-
-# TODO move these inside EETCTradingBot class, it's cleaner
-
-def process_order_book_data(bot_instance=None, topic=None, latest_data=None):
-    """
-    TODO
-    """
-    if not latest_data or not topic or not bot_instance:
-        return
-
-    if len(latest_data) > 1:
-        # storing in dict for performance
-        order_book = {}
-        for price_lvl_data in latest_data:
-            order_book[price_lvl_data['price']] = price_lvl_data
-
-        bot_instance.data[topic] = order_book
-    else:
-        if topic in bot_instance.data:
-            # https://docs.bitfinex.com/v2/reference#ws-public-order-books
-            if latest_data[0]['count'] == 0:
-                bot_instance.data[topic].pop(latest_data[0]['price'], None)
-            else:
-                bot_instance.data[topic].update(
-                    {latest_data[0]['price']: latest_data[0]},
-                )
-
-
-def process_trade_data(bot_instance=None, topic=None, latest_data=None):
-    """
-    TODO
-    """
-    if not latest_data or not topic or not bot_instance:
-        return
-
-    if len(latest_data) > 1:
-        # storing in deque for performance
-        bot_instance.data[topic] = deque(latest_data, maxlen=len(latest_data))
-    else:
-        if topic in bot_instance.data:
-            bot_instance.data[topic].append(latest_data[0])
-
-
-def process_candle_data(bot_instance=None, topic=None, latest_data=None):
-    """
-    TODO
-    """
-    if not latest_data or not topic or not bot_instance:
-        return
-
-    if len(latest_data) > 1:
-        bot_instance.data[topic] = latest_data
-    else:
-        if topic in bot_instance.data:
-            latest_data = latest_data[-1]
-            latest_time = timestamp_to_datetime_str(str(latest_data['time']))
-            last_time = timestamp_to_datetime_str(str(
-                bot_instance.data[topic][-1]['time'],
-            ))
-
-            if is_date_bigger_than(latest_time, last_time):
-                # add new candle
-                bot_instance.data[topic].append(latest_data)
-                bot_instance.data.pop(0, None)
-            elif last_time == latest_time:
-                # update the latest one
-                bot_instance.data[topic][-1].update(latest_data)
