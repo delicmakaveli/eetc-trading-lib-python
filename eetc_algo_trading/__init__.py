@@ -67,8 +67,8 @@ class EETCTradingBot:
 
     def start(self):
         """
-        TODO
-        :return:
+        Method for starting the trading bot.
+        Authenticate, connect to EETC Data Feed and do all other preparations.
         """
         # Authenticate via API Key to get ZeroMQ URLs for EETC Data Feed
         self.authenticate()
@@ -83,6 +83,12 @@ class EETCTradingBot:
             sleep(3600)  # just some bullshit so we don't kill the CPU :)
 
     def authenticate(self):
+        """
+        Authenticates with EETC's authentication API.
+        If authentication is successful, all info required to start the bot will
+        be received.
+        If not, assert statements will fail and the bot will not start.
+        """
         r = self.order_manager_client.authenticate()
 
         self.eetc_data_feed_zmq_sub_url = r.get("eetc_data_feed_zmq_sub_url")
@@ -161,7 +167,7 @@ class EETCTradingBot:
 
 class EETCOrderManagerThread(threading.Thread):
     """
-    TODO
+    Thread which streams order updates from EETC Order Manager via ZMQ PUB-SUB.
     """
     placed_orders = {}
     zmq_context = None
@@ -171,7 +177,7 @@ class EETCOrderManagerThread(threading.Thread):
 
     def run(self):
         """
-        TODO
+        Thread routine. Will be called after thread.start() is called.
         :return:
         """
         self.zmq_context = zmq.Context()
@@ -203,7 +209,8 @@ class EETCOrderManagerThread(threading.Thread):
 
 class EETCDataFeedThread(threading.Thread):
     """
-    TODO
+    Thread which streams data from EETC Data Feed via ZMQ PUB-SUB.
+    Also can get data snapshots from EETC Data Feed via ZMQ REQ-REP.
     """
     zmq_context = None
     zmq_sub_socket = None
@@ -213,8 +220,7 @@ class EETCDataFeedThread(threading.Thread):
 
     def run(self):
         """
-        TODO
-        :return:
+        Thread routine. Will be called after thread.start() is called.
         """
         self.zmq_context = zmq.Context()
         self.zmq_sub_socket = self.zmq_context.socket(zmq.SUB)
@@ -252,8 +258,8 @@ class EETCDataFeedThread(threading.Thread):
 
     def get_data_snapshot(self):
         """
-        TODO
-        :return:
+        Gets data snapshot from EETC Data Feed via ZMQ REQ-REP and stores it in
+        instance attribute(instance.data).
         """
         for topic in self.bot_instance.data_feed_topics:
             self.zmq_req_socket.send(topic.encode())
@@ -271,10 +277,9 @@ class EETCDataFeedThread(threading.Thread):
 
 def algorithm_manual_trigger_routine(bot_instance, manual_trigger_details):
     """
-    TODO
-    :param bot_instance:
-    :param manual_trigger_details:
-    :return:
+    Function for manually triggering algorithm on a bot instance.
+    :param bot_instance: bot instance for which we want to trigger algorithm.
+    :param manual_trigger_details: data received in the request.
     """
     while True:
         # keep trying until the algorithm lock becomes free, then trigger
@@ -287,7 +292,7 @@ def algorithm_manual_trigger_routine(bot_instance, manual_trigger_details):
 
 class RemoteTriggerThread(threading.Thread):
     """
-    TODO
+    Thread that allows algorithms to be triggered using ZMQ REQ-REP.
     """
     zmq_context: zmq.Context = None
     zmq_rep_socket: zmq.Socket = None
@@ -296,8 +301,7 @@ class RemoteTriggerThread(threading.Thread):
 
     def run(self):
         """
-        TODO
-        :return:
+        Thread routine. Will be called after thread.start() is called.
         """
         self.zmq_context = zmq.Context()
         self.zmq_rep_socket = self.zmq_context.socket(zmq.REP)
@@ -324,12 +328,12 @@ class RemoteTriggerThread(threading.Thread):
 
 class EETCOrderManagerRESTClient:
     """
-    TODO
+    REST Client for EETC Order Manager's REST API.
     """
     def __init__(self, eetc_api_key: str):
         """
-        TODO
-        :param eetc_api_key:
+        Init method.
+        :param eetc_api_key: API key provided by EETC to it's clients.
         """
         self.eetc_api_key = eetc_api_key
 
@@ -478,12 +482,9 @@ class EETCOrderManagerRESTClient:
 
         return data
 
-
-# TODO add type hints for all these functions
-
 def timestamp_to_datetime_str(timestamp):
     """
-    TODO
+    Converts timestamp to datetime string.
     :param timestamp:
     :return:
     """
