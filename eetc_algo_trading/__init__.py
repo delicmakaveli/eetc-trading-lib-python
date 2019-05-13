@@ -482,6 +482,7 @@ class EETCOrderManagerRESTClient:
 
         return data
 
+
 def timestamp_to_datetime_str(timestamp):
     """
     Converts timestamp to datetime string.
