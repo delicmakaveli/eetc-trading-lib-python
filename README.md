@@ -49,9 +49,19 @@ bot.start()
 
 The only thing a developer needs to do is write the "algorithm" function and pass it to the EETCTradingBot during initialization.
 
+NOTE: The developer must also obtain the algorithm lock when starting the algorithm and release it when the algorithm ends, all within the algorithm function like so:
+```python
+def algorithm(bot_instance, topic=None, manual_trigger_details=None):
+    bot_instance.algorithm_lock = True  # "obtain" algorithm lock
+
+    pass  # do some work
+
+    bot_instance.algorithm_lock = False  # "release" algorithm lock
+```
+
 ### Authentication
 To be able to receive data or execute trades, an API key is needed, which will be provided to you by EETC.
-Although this library is open-sourced, nobody who isn't a client of EETC will be able to use the services that this library uses without the API key.
+Although this library is open-sourced, nobody who isn't a client of EETC won't be able to use the services that this library uses without the API key.
 
 To become a client and obtain your API key, please contact us at: [eastempiretradingcompany2019@gmail.com](eastempiretradingcompany2019@gmail.com)
 
@@ -59,21 +69,21 @@ To become a client and obtain your API key, please contact us at: [eastempiretra
 It is entirely up to the developer to implement their own order management logic.
 [EETC Order Manager](https://github.com/delicmakaveli/eetc-order-manager-crypto) provides various APIs where clients can get order information and receive real-time updates.
 
-You will receive real-time updated on all your placed orders, that part is already implemented for you.
+You will receive real-time updates on all your placed orders, that part is already implemented for you.
 
 They can be accessed like this:
 ```python
 # You can obtain lock for reading placed orders, but it's not necessary
-bot_instance.placed_orders_lock = True  # kinda "obtain" lock
+bot_instance.placed_orders_lock = True  # "obtain" order snapshot lock
 
 print(bot_instance.placed_orders)
 
-bot_instance.placed_orders_lock = False  # kinda "release" lock
+bot_instance.placed_orders_lock = False  # "release" order snapshot lock
 ```
 
 The most common tactic is to write a helper function for managing orders which will be executed within the algorithm function.
 
-This approach may not be the most user-friendly, but it was chosen because it gives the developer absolute freedom for writing their strategy, which includes order management.
+This approach may not be the most user-friendly, but it was chosen because it gives the developer absolute freedom when writing their strategy/algorithm, which includes order management too.
 
 ### Manual execution via ZeroMQ
 Strategies can be triggered either manually via ZeroMQ by sending a request via REQ-REP sockets.
@@ -81,9 +91,12 @@ What information you put inside this request and how you process it is entirely 
 One simple use case for this might be when one algorithm is not sure about a trading decision, it can call
 another algorithm which may be able to do that.
 
+To see how to implement sending a ZeroMQ request, please look at [the ZeroMQ Documentation](http://zeromq.org/).
+
 ### Event-based execution
 Strategies can also be triggered whenever a certain kind of data signal comes in (topic).
 For example on each "candles:BTC/USD:1m" signal, execute the strategy.
+This would probably be the most typical use-case.
 
 ### Scheduled execution
 
