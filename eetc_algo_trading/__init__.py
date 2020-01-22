@@ -11,15 +11,12 @@ import zmq
 
 
 EETC_ORDER_MANAGER_API_KEY_HEADER = 'EETC-API-KEY'
-# TODO launch EETC Order Manager live
+# TODO change this after EETC Order Manager goes live again
 EETC_ORDER_MANAGER_BASE_URL_HTTP = 'http://localhost:8080'
 EETC_ORDER_MANAGER_BASE_URL_HTTPS = 'https://localhost:8443'
 
 
 class EETCTradingBot:
-    """
-    TODO
-    """
     def __init__(self,
                  algorithm: Callable,
                  eetc_api_key: str,
@@ -74,13 +71,13 @@ class EETCTradingBot:
         self.authenticate()
 
         self.order_manager_thread.start()
-        sleep(1)  # idk why the fuck do I have this...
+        sleep(1)
         self.data_feed_thread.start()
         if self.allow_remote_triggering:
             self.remote_trigger_thread.start()
 
         while True:
-            sleep(3600)  # just some bullshit so we don't kill the CPU :)
+            sleep(3600)  # so we don't kill the CPU :)
 
     def authenticate(self):
         """
